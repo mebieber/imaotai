@@ -89,18 +89,19 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
 
         WtsSendSmsRequest request = new WtsSendSmsRequest();
         BeanUtils.copyProperties(carAppointment, request);
+        request.setVisitDate(DateUtil.format(carAppointment.getVisitDate(), DatePattern.NORM_DATE_FORMAT));
 
         try {
             Boolean result = WtsClient.appointmentSendCode(request);
             Assert.isTrue(Objects.equals(result, Boolean.TRUE), "验证码发送失败");
             log.setContent("发送短信成功");
         } catch (Exception e) {
-            carAppointment.setStatus(CarAppointmentEnum.FAILED.getCode());
             log.setContent("失败原因：" + e.getMessage());
+            carAppointment.setStatus(CarAppointmentEnum.FAILED.getCode());
+            updateById(carAppointment);
             throw e;
         } finally {
             carAppointmentLogService.saveLog(log);
-            updateById(carAppointment);
         }
     }
 

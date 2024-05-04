@@ -29,6 +29,7 @@ public class WtsClient {
         request.header("Content-Type", "application/json");
         request.header("Park-Mobile-Auth", param.getToken());
 
+        logger.info("appointment send code param:{}", param);
         String apiParam = param.signature();
         HttpResponse execute = request.body(apiParam).execute();
         WtsBaseResponse response = parseSendCodeResult(execute.body());
@@ -49,6 +50,7 @@ public class WtsClient {
         request.header("Content-Type", "application/x-www-form-urlencoded");
         request.header("Park-Mobile-Auth", param.getToken());
 
+        logger.info("appointment submit param:{}", param);
         HttpResponse execute = request.formStr(param.toMap()).execute();
         WtsBaseResponse response = JSON.parseObject(execute.body(), WtsBaseResponse.class);
 
