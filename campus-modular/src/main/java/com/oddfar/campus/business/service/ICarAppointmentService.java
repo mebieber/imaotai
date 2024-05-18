@@ -10,7 +10,7 @@ import com.oddfar.campus.business.entity.IShop;
 public interface ICarAppointmentService extends IService<CarAppointment> {
 
 
-    Boolean create(CarAppointmentCreateDTO createDTO);
+    Long create(CarAppointmentCreateDTO createDTO);
 
     Boolean modify(CarAppointmentModifyDTO modifyDTO);
 

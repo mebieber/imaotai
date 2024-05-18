@@ -41,7 +41,7 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
     public static final String PARK_ID = "10162606";
 
     @Override
-    public Boolean create(CarAppointmentCreateDTO createDTO) {
+    public Long create(CarAppointmentCreateDTO createDTO) {
         checkOperatorParam(createDTO);
         CarAppointment entity = new CarAppointment();
         BeanUtils.copyProperties(createDTO, entity);
@@ -50,7 +50,8 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
         entity.setParkId(PARK_ID);
         entity.setCreateUser(SecurityUtils.getUserId());
         entity.setCreateTime(new Date());
-        return save(entity);
+        save(entity);
+        return entity.getId();
     }
 
     @Override
