@@ -18,7 +18,8 @@ public enum CarAppointmentEnum {
      */
     FAILED(-1, "预约失败"),
     WAIT(0, "待处理"),
-    SUCCESS(1, "预约成功");
+    SUCCESS(1, "预约成功"),
+    SEND_SMS_SUCCESS(2, "短信发送成功");
 
     final Integer code;
     final String message;

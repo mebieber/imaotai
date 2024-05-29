@@ -4,6 +4,7 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.IdcardUtil;
 import cn.hutool.core.util.PhoneUtil;
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oddfar.campus.business.dto.CarAppointmentCreateDTO;
@@ -18,6 +19,7 @@ import com.oddfar.campus.business.service.ICarAppointmentService;
 import com.oddfar.campus.business.third.wts.client.WtsClient;
 import com.oddfar.campus.business.third.wts.request.WtsCarAppointmentSubmitRequest;
 import com.oddfar.campus.business.third.wts.request.WtsSendSmsRequest;
+import com.oddfar.campus.common.core.RedisCache;
 import com.oddfar.campus.common.enums.CarAppointmentEnum;
 import com.oddfar.campus.common.utils.JWTUtil;
 import com.oddfar.campus.common.utils.LicensePlateValidator;
@@ -25,11 +27,14 @@ import com.oddfar.campus.common.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -38,7 +43,12 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
 
     private final ICarAppointmentLogService carAppointmentLogService;
 
+    private final RedisCache redisCache;
+
     public static final String PARK_ID = "10162606";
+    public static final int MAX_COUNT = 10;
+    public static final long MAX_AGING = 2 * 60 * 1000;
+    public static final String CAR_KEY = "car:key:";
 
     @Override
     public Long create(CarAppointmentCreateDTO createDTO) {
@@ -95,6 +105,7 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
         try {
             Boolean result = WtsClient.appointmentSendCode(request);
             Assert.isTrue(Objects.equals(result, Boolean.TRUE), "验证码发送失败");
+            carAppointment.setStatus(CarAppointmentEnum.SEND_SMS_SUCCESS.getCode());
             log.setContent("发送短信成功");
         } catch (Exception e) {
             log.setContent("失败原因：" + e.getMessage());
@@ -160,6 +171,52 @@ public class ICarAppointmentServiceImpl extends ServiceImpl<CarAppointmentMapper
 
     public void findPage() {
 
+    }
+
+    @Scheduled(cron = "0/10 * * * * ?")
+    public void autoSendSmsCodeTask() {
+        List<CarAppointment> waitList = getValidList();
+        log.info("auto send sms code task start. list:{}", JSON.toJSONString(waitList));
+
+        for (CarAppointment carAppointment : waitList) {
+            Long id = carAppointment.getId();
+            try {
+                if (isValid(id)) {
+                    sendCode(id);
+                }
+            } catch (Exception e) {
+                log.error("auto send sms code task failed. id:{}, cause:{}", id, e.getMessage());
+            }
+        }
+    }
+
+    private List<CarAppointment> getValidList() {
+        Date startDate = DateUtil.beginOfDay(new Date());
+        return lambdaQuery()
+                .select(CarAppointment::getId)
+                .in(CarAppointment::getStatus, CarAppointmentEnum.WAIT.getCode(), CarAppointmentEnum.FAILED.getCode())
+                .ge(CarAppointment::getVisitDate, startDate)
+                .list();
+    }
+
+    private boolean isValid(Long id) {
+        Long count = addCache(id);
+        if (count > MAX_COUNT) {
+            log.info("时效内抢票次数超过最大限制[{}]", id);
+            return false;
+        }
+        return true;
+    }
+
+    private Long addCache(Long id) {
+        // 注意多线程情况下要加锁
+        String key = CAR_KEY + id;
+        boolean hasKey = redisCache.hasKey(key);
+        Long count = redisCache.increment(key);
+        if (!hasKey) {
+            redisCache.expire(key, MAX_AGING, TimeUnit.MILLISECONDS);
+        }
+        return count;
     }
 
 }

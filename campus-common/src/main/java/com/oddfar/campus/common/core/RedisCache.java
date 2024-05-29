@@ -253,4 +253,8 @@ public class RedisCache {
     public Collection<String> keys(final String pattern) {
         return redisTemplate.keys(pattern);
     }
+
+    public Long increment(final String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
 }

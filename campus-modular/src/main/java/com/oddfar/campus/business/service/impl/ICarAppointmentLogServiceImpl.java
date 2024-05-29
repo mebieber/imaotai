@@ -16,7 +16,7 @@ public class ICarAppointmentLogServiceImpl extends ServiceImpl<CarAppointmentLog
 
     @Override
     public void saveLog(CarAppointmentLog log) {
-        log.setCreateUser(SecurityUtils.getUserId());
+        log.setCreateUser(SecurityUtils.getAuthentication() != null ? SecurityUtils.getUserId() : -1);
         log.setCreateTime(new Date());
         save(log);
     }

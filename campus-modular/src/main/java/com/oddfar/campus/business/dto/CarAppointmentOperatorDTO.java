@@ -1,7 +1,9 @@
 package com.oddfar.campus.business.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -31,6 +33,8 @@ public class CarAppointmentOperatorDTO implements Serializable {
     @ApiModelProperty("驾驶员姓名")
     private String name;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
     @NotNull(message = "预约时间不能为空")
     @ApiModelProperty("预约时间")
     private Date visitDate;
